@@ -1,0 +1,10 @@
+from database.connection import db  # import your DB client or db object
+from pymongo import ReturnDocument
+
+def get_next_student_id():
+    counter = db.counters.find_one_and_update(
+        {"_id": "student_id"},
+        {"$inc": {"sequence_value": 1}},
+        return_document=ReturnDocument.AFTER
+    )
+    return counter["sequence_value"]
