@@ -16,3 +16,4 @@ except Exception as e:
 
 db = client["college"]
 student_collection = db["students"]
+department_collection = db["department"]
