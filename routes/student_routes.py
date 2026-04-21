@@ -8,11 +8,13 @@ from schemas.student_schema import StudentCreate, StudentOut, StudentPagination
 from services.counter_service import get_next_student_id
 from services.pagination_service import paginate
 from services.student_service import student_helper
+from utils.auth_utils import verify_token, admin_only
 
 router = APIRouter(tags=["students"])
 
 @router.post("/add_student")
-def add_student(student: StudentCreate, db=Depends(get_db)):
+def add_student(student: StudentCreate, db=Depends(get_db),
+        user= Depends(verify_token)):
     try:
         data = student.model_dump()
 
@@ -43,7 +45,8 @@ def add_student(student: StudentCreate, db=Depends(get_db)):
 def get_students(
         page: int = Query(1, ge=1),
         limit : int = Query(10, ge=1, le=100),
-        db = Depends(get_db)):
+        db = Depends(get_db),
+        user= Depends(admin_only)):
     try:
         student_collection = db["students"]
 
@@ -103,7 +106,8 @@ def get_students_by_department(department_id: int, db = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/delete_student_by_id/{student_id}")
-def delete_student(student_id: int,db = Depends(get_db)):
+def delete_student(student_id: int,db = Depends(get_db),
+        user= Depends(verify_token)):
     try:
         student_collection = db["students"]
         result = student_collection.delete_one({"student_id" : student_id})

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
 
+from routes.auth_routes import router as auth_routes
 from routes.department_routes import router as department_routes
 from routes.student_routes import router as student_routes
 
@@ -18,3 +19,4 @@ def redirect_to_docs():
 app.include_router(student_routes, prefix="/students", tags=["students"])
 app.include_router(department_routes, prefix="/departments", tags=["departments"])
 
+app.include_router(auth_routes, prefix="/auth", tags=["auth"])

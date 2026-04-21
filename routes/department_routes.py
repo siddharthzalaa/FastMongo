@@ -5,6 +5,7 @@ from database.connection import get_db
 from schemas.department_schema import Department, DepartmentPagination, department_helper
 from services.counter_service import get_next_department_id
 from services.pagination_service import paginate
+from utils.auth_utils import verify_token
 
 router = APIRouter(tags=["departments"])
 
@@ -30,7 +31,8 @@ def get_departments(
         raise e
 
 @router.post("/create_department")
-def create_department(department: Department, db = Depends(get_db)):
+def create_department(department: Department, db = Depends(get_db),
+        user= Depends(verify_token)):
     try:
 
         data = department.model_dump()
@@ -56,7 +58,8 @@ def create_department(department: Department, db = Depends(get_db)):
         return {"error": str(e)}
 
 @router.delete("/delete_department_by_id/{department_id}")
-def delete_student(department_id: int, db = Depends(get_db)):
+def delete_student(department_id: int, db = Depends(get_db),
+        user= Depends(verify_token)):
     try:
         department_collection = db["department"]
         department = department_collection.find_one({"deptId" : department_id})
