@@ -1,24 +1,33 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.params import Query
 
 from database.connection import get_db
-from schemas.department_schema import Department
+from schemas.department_schema import Department, DepartmentPagination, department_helper
 from services.counter_service import get_next_department_id
+from services.pagination_service import paginate
 
 router = APIRouter(tags=["departments"])
 
-@router.get("/get_departments")
-def get_department(db = Depends(get_db)):
-        try:
-            department_collection = db["department"]
-            results = list(department_collection.find())
+@router.get("/get_departments", response_model=DepartmentPagination)
+def get_departments(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    db=Depends(get_db)
+):
+    try:
+        department_collection = db["department"]
 
-            for department in results:
-                department["_id"] = str(department["_id"])
+        result = paginate(department_collection, page, limit)
 
-            return results
+        result["data"] = [
+            department_helper(dept) for dept in result["data"]
+        ]
 
-        except Exception as e:
-            return {"error": str(e)}
+        return result
+
+    except Exception as e:
+        print("ERROR:", e)
+        raise e
 
 @router.post("/create_department")
 def create_department(department: Department, db = Depends(get_db)):

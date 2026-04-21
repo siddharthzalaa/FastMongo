@@ -1,6 +1,6 @@
 def student_helper(student) -> dict:
     if not student:
-        return None
+        return {}
 
     return {
         "id": str(student.get("_id")),

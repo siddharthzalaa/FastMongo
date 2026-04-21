@@ -1,11 +1,12 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException
-from fastapi.params import Depends
+from fastapi.params import Depends, Query
 
 from database.connection import get_db
-from schemas.student_schema import StudentCreate, StudentOut
+from schemas.student_schema import StudentCreate, StudentOut, StudentPagination
 from services.counter_service import get_next_student_id
+from services.pagination_service import paginate
 from services.student_service import student_helper
 
 router = APIRouter(tags=["students"])
@@ -38,13 +39,19 @@ def add_student(student: StudentCreate, db=Depends(get_db)):
         raise
 
 
-@router.get("/get_students", response_model=List[StudentOut])
-def get_students(db = Depends(get_db)):
+@router.get("/get_students", response_model=StudentPagination)
+def get_students(
+        page: int = Query(1, ge=1),
+        limit : int = Query(10, ge=1, le=100),
+        db = Depends(get_db)):
     try:
         student_collection = db["students"]
-        result = list(student_collection.find())
 
-        return [student_helper(student) for student in result]
+        result = paginate(student_collection, page, limit)
+
+        result["data"] = [student_helper(student) for student in result["data"]]
+
+        return result
 
     except Exception as e:
         return {"error": str(e)}

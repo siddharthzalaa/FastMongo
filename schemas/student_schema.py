@@ -31,3 +31,9 @@ class StudentOut(BaseModel):
     experience: Optional[List[Experience]] = None
     student_id: Optional[int] = None
     department_id: Optional[int] = None
+
+class StudentPagination(BaseModel):
+    data: List[StudentOut]
+    total:int
+    page:int
+    limit:int
