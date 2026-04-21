@@ -6,14 +6,16 @@ load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI")
 
-client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+def get_db():
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 
-try:
-    client.admin.command('ping')
-    print("✅ Connected to MongoDB successfully!")
-except Exception as e:
-    print("❌ Connection failed:", e)
+    try:
+        client.admin.command('ping')
+        print("✅ Connected to MongoDB successfully!")
 
-db = client["college"]
-student_collection = db["students"]
-department_collection = db["department"]
+        db = client["college"]
+        yield db
+
+    finally:
+        client.close()
+

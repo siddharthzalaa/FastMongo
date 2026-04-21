@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
+from schemas.department_schema import Department
+
 
 class Experience(BaseModel):
     company: str
@@ -17,6 +19,7 @@ class StudentCreate(BaseModel):
     bio: str
     identity: Identity
     experience: List[Experience]
+    department_id: int
 
 class StudentOut(BaseModel):
     id: str
@@ -26,5 +29,5 @@ class StudentOut(BaseModel):
     bio: str
     identity: Optional[Identity] = None
     experience: Optional[List[Experience]] = None
-    student_id: int
-    department_id: int
+    student_id: Optional[int] = None
+    department_id: Optional[int] = None
