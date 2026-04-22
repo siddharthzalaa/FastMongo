@@ -5,7 +5,8 @@ from database.connection import get_db
 from schemas.department_schema import Department, DepartmentPagination, department_helper
 from services.counter_service import get_next_department_id
 from services.pagination_service import paginate
-from utils.auth_utils import verify_token
+from utils.auth_utils import verify_token, user_or_admin, admin_only
+from utils.logger_utils import logger
 
 router = APIRouter(tags=["departments"])
 
@@ -13,26 +14,26 @@ router = APIRouter(tags=["departments"])
 def get_departments(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
-    db=Depends(get_db)
+    search: str = Query(None),
+    db=Depends(get_db),
+    user=Depends(user_or_admin)
 ):
-    try:
-        department_collection = db["department"]
+    department_collection = db["department"]
 
-        result = paginate(department_collection, page, limit)
+    filter_query = {}
 
-        result["data"] = [
-            department_helper(dept) for dept in result["data"]
-        ]
+    if search:
+        filter_query["name"] = {"$regex": search, "$options": "i"}
 
-        return result
+    result = paginate(department_collection, page, limit, filter_query)
 
-    except Exception as e:
-        print("ERROR:", e)
-        raise e
+    result["data"] = [department_helper(dept) for dept in result["data"]]
+
+    return result
 
 @router.post("/create_department")
 def create_department(department: Department, db = Depends(get_db),
-        user= Depends(verify_token)):
+        user= Depends(admin_only)):
     try:
 
         data = department.model_dump()
@@ -55,20 +56,22 @@ def create_department(department: Department, db = Depends(get_db),
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Error in creating department: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/delete_department_by_id/{department_id}")
-def delete_student(department_id: int, db = Depends(get_db),
-        user= Depends(verify_token)):
+def delete_department(department_id: int, db = Depends(get_db),
+        user= Depends(admin_only)):
     try:
         department_collection = db["department"]
         department = department_collection.find_one({"deptId" : department_id})
 
         if not department:
-            return {"error": "Department not found"}
+            raise HTTPException(status_code=404, detail="Department not found")
         else:
-            department_collection.delete_one({"student_id" : department_id})
+            department_collection.delete_one({"deptId" : department_id})
             return {"department_id": department_id,
                     "deleted": True}
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Error in deleting department: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

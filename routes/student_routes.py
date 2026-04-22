@@ -8,13 +8,14 @@ from schemas.student_schema import StudentCreate, StudentOut, StudentPagination
 from services.counter_service import get_next_student_id
 from services.pagination_service import paginate
 from services.student_service import student_helper
-from utils.auth_utils import verify_token, admin_only
+from utils.auth_utils import verify_token, admin_only, user_or_admin
+from utils.logger_utils import logger
 
 router = APIRouter(tags=["students"])
 
 @router.post("/add_student")
-def add_student(student: StudentCreate, db=Depends(get_db),
-        user= Depends(verify_token)):
+def create_student(student: StudentCreate, db=Depends(get_db),
+        user= Depends(admin_only)):
     try:
         data = student.model_dump()
 
@@ -37,41 +38,48 @@ def add_student(student: StudentCreate, db=Depends(get_db),
         }
 
     except HTTPException as e:
-        print("HTTP ERROR:", repr(e))
-        raise
+        logger.error(f"Error in adding student: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/get_students", response_model=StudentPagination)
 def get_students(
-        page: int = Query(1, ge=1),
-        limit : int = Query(10, ge=1, le=100),
-        db = Depends(get_db),
-        user= Depends(admin_only)):
-    try:
-        student_collection = db["students"]
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    department_id: int = Query(None),
+    age: int = Query(None),
+    search: str = Query(None),
+    db=Depends(get_db),
+    user=Depends(user_or_admin)
+):
+    student_collection = db["students"]
 
-        result = paginate(student_collection, page, limit)
+    filter_query = {}
 
-        result["data"] = [student_helper(student) for student in result["data"]]
+    if department_id:
+        filter_query["department_id"] = department_id
 
-        return result
+    if age:
+        filter_query["age"] = age
 
-    except Exception as e:
-        return {"error": str(e)}
+    if search:
+        filter_query["name"] = {"$regex": search, "$options": "i"}
+
+    result = paginate(student_collection, page, limit, filter_query)
+
+    result["data"] = [student_helper(student) for student in result["data"]]
+
+    return result
 
 @router.get("/get_student_by_id/{student_id}", response_model=StudentOut)
 def get_students_by_id(student_id: int, db = Depends(get_db)):
-    try:
+
         student_collection = db["students"]
         student = student_collection.find_one({"student_id" : student_id})
         if not student:
             raise HTTPException(status_code=404, detail="Student not found")
 
         return student_helper(student)
-
-    except Exception as e:
-        return {"error": str(e)}
-
 
 @router.get("",response_model=List[StudentOut])
 def get_students_by_department(department_id: int, db = Depends(get_db)):
@@ -103,11 +111,12 @@ def get_students_by_department(department_id: int, db = Depends(get_db)):
         raise
 
     except Exception as e:
+        logger.error(f"Error in getting students: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/delete_student_by_id/{student_id}")
 def delete_student(student_id: int,db = Depends(get_db),
-        user= Depends(verify_token)):
+        user= Depends(admin_only)):
     try:
         student_collection = db["students"]
         result = student_collection.delete_one({"student_id" : student_id})
@@ -120,4 +129,5 @@ def delete_student(student_id: int,db = Depends(get_db),
             "deleted" : True
         }
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Error in deleting student: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

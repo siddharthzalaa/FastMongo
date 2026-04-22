@@ -3,7 +3,6 @@ from typing import List
 
 
 class Department(BaseModel):
-    id: str
     name: str
 
     @field_validator("name")
@@ -22,6 +21,6 @@ class DepartmentPagination(BaseModel):
 
 def department_helper(dept: dict) -> dict:
     return {
-        "id": str(dept["_id"]),   # direct access (safe)
-        "name": dept["name"]      # enforce required field
+        "id": str(dept["_id"]),
+        "name": dept["name"]
     }

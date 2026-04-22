@@ -11,7 +11,6 @@ def get_db():
 
     try:
         client.admin.command('ping')
-        print("✅ Connected to MongoDB successfully!")
 
         db = client["college"]
         yield db
